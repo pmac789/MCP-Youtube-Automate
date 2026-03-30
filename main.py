@@ -91,14 +91,26 @@ def main() -> None:
     if force_run or not skip_startup:
         reason = "FORCE_RUN=true" if force_run else "startup test run"
         logger.info("Running pipeline immediately (%s)...", reason)
-        run_pipeline()
+        try:
+            run_pipeline()
+        except Exception as exc:
+            logger.error("Startup pipeline run failed — will retry at 09:00 UTC: %s", exc)
 
     logger.info("Scheduler active — daily run at 09:00 UTC")
-    schedule.every().day.at("09:00").do(run_pipeline)
+    schedule.every().day.at("09:00").do(_safe_run_pipeline)
 
     while True:
         schedule.run_pending()
         time.sleep(30)
+
+
+def _safe_run_pipeline() -> None:
+    """Run the pipeline and catch all exceptions so the scheduler stays alive."""
+    logger = logging.getLogger(__name__)
+    try:
+        run_pipeline()
+    except Exception as exc:
+        logger.error("Scheduled pipeline run failed: %s", exc)
 
 
 if __name__ == "__main__":
