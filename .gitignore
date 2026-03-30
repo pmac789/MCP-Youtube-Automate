@@ -4,6 +4,7 @@
 !.env.example
 token.pickle
 client_secrets.json
+*.json
 
 # Output & logs (runtime generated)
 output/
