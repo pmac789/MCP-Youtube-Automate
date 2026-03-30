@@ -1,8 +1,7 @@
 [build]
-builder = "NIXPACKS"
-nixPackages = ["ffmpeg"]
+builder = "nixpacks"
+nixPackages = ["ffmpeg", "ffmpeg.bin"]
 
 [deploy]
 startCommand = "python main.py"
 restartPolicyType = "always"
-restartPolicyMaxRetries = 5

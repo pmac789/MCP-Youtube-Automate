@@ -6,18 +6,19 @@ generate_video(script, audio_path, title, content_type) -> dict
   Returns {"main": "<path to 1280x720 mp4>", "short": "<path to 720x1280 mp4>"}
 
 How it works:
-  1. ffprobe detects the exact audio duration
+  1. mutagen reads the exact audio duration (no ffprobe needed)
   2. FFmpeg renders an animated background + title + bouncing notes + lyrics
      all in one pass, muxed with the ElevenLabs MP3
   3. A 60-second 9:16 Short is cropped from the main video
 """
 
-import json
 import logging
 import re
 import subprocess
 import uuid
 from pathlib import Path
+
+from mutagen.mp3 import MP3
 
 logger = logging.getLogger(__name__)
 
@@ -33,6 +34,45 @@ BG_COLOURS = {
 DEFAULT_BG = "#7BC8F6"
 
 SHORT_DURATION = 60   # seconds
+
+# FFmpeg binary candidates — try plain name first, then common absolute paths
+_FFMPEG_CANDIDATES = ["ffmpeg", "/usr/bin/ffmpeg", "/usr/local/bin/ffmpeg", "/nix/var/nix/profiles/default/bin/ffmpeg"]
+
+
+# ---------------------------------------------------------------------------
+# Startup check
+# ---------------------------------------------------------------------------
+
+def _find_ffmpeg() -> str:
+    """
+    Return the first working ffmpeg binary path.
+    Logs a clear error and raises if none found.
+    """
+    for candidate in _FFMPEG_CANDIDATES:
+        try:
+            result = subprocess.run(
+                [candidate, "-version"],
+                capture_output=True,
+                timeout=10,
+            )
+            if result.returncode == 0:
+                logger.info("FFmpeg found: %s", candidate)
+                return candidate
+        except (FileNotFoundError, OSError):
+            continue
+
+    logger.error(
+        "FFmpeg not found - check nixpacks config. "
+        "Tried: %s", ", ".join(_FFMPEG_CANDIDATES)
+    )
+    raise RuntimeError(
+        "FFmpeg not found. Add nixPackages = [\"ffmpeg\", \"ffmpeg.bin\"] to railway.toml "
+        "or install ffmpeg locally."
+    )
+
+
+# Resolve ffmpeg path once at module load so the error surfaces early.
+_FFMPEG_BIN = _find_ffmpeg()
 
 
 # ---------------------------------------------------------------------------
@@ -95,16 +135,9 @@ def generate_video(
 # ---------------------------------------------------------------------------
 
 def _get_audio_duration(audio_path: str) -> float:
-    """Use ffprobe to get the duration of the audio file in seconds."""
-    cmd = [
-        "ffprobe", "-v", "quiet",
-        "-print_format", "json",
-        "-show_format",
-        audio_path,
-    ]
-    result = subprocess.run(cmd, capture_output=True, text=True, check=True)
-    info = json.loads(result.stdout)
-    duration = float(info["format"]["duration"])
+    """Use mutagen to read MP3 duration — no ffprobe subprocess needed."""
+    audio = MP3(audio_path)
+    duration = audio.info.length
     logger.info("Audio duration: %.2fs", duration)
     return duration
 
@@ -234,7 +267,7 @@ def _build_video(
     vf = ",".join(vf_parts)
 
     cmd = [
-        "ffmpeg", "-y",
+        _FFMPEG_BIN, "-y",
         "-f", "lavfi",
         "-i", f"color=s={width}x{height}:r=30",   # synthetic video source
         "-i", audio_path,
