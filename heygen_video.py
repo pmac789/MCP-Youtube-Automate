@@ -45,10 +45,14 @@ BACKGROUND_BY_TYPE: dict[str, dict] = {
 DEFAULT_BACKGROUND = BACKGROUND_BY_TYPE["learning"]
 
 
+FALLBACK_AVATAR_ID = "Abigail_expressive_2024112501"
+
+
 def _get_avatar_id() -> str:
     avatar_id = (os.environ.get("HEYGEN_AVATAR_ID") or "").strip()
     if not avatar_id:
-        raise EnvironmentError("HEYGEN_AVATAR_ID is not set")
+        logger.warning("HEYGEN_AVATAR_ID not set — using fallback: %s", FALLBACK_AVATAR_ID)
+        return FALLBACK_AVATAR_ID
     return avatar_id
 
 
@@ -181,10 +185,7 @@ def _submit_video_job(
             }
         ],
         "dimension": {"width": width, "height": height},
-        "aspect_ratio": None,
-        "test": False,
         "caption": False,
-        "title": title[:80],
     }
 
     with httpx.Client(timeout=30) as client:
