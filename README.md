@@ -88,8 +88,8 @@ cp .env.example .env
 | `ELEVENLABS_API_KEY` | elevenlabs.io → Profile → API Keys |
 | `ELEVENLABS_VOICE_ID` | elevenlabs.io → Voices → pick voice → copy ID |
 | `HEYGEN_API_KEY` | app.heygen.com → Settings → API |
-| `HEYGEN_AVATAR_ID` | app.heygen.com → Avatars → pick avatar → copy ID |
-| `YT_PRIVACY` | `public`, `unlisted`, or `private` |
+| `HEYGEN_AVATAR_ID` | app.heygen.com → Avatars → pick avatar → copy ID (default: `823e02e85726482c80bfff9d6baceb4d`) |
+| `YT_PRIVACY` | `public`, `unlisted`, or `private` (default: `private`) |
 
 ### 4. YouTube OAuth (one-time, local)
 
@@ -125,7 +125,7 @@ MCP-Youtube-Automate/
 ├── content_calendar.py     — weekly schedule & topic rotation
 ├── claude_writer.py        — Claude AI content writing
 ├── elevenlabs_music.py     — ElevenLabs music generation + TTS voiceover
-├── heygen_video.py         — HeyGen avatar video rendering
+├── heygen_video.py         — HeyGen avatar lip-sync video rendering
 ├── youtube_uploader.py     — YouTube Data API v3 uploader
 ├── auth_setup.py           — one-time OAuth token generator
 ├── utils.py                — logging + cleanup utilities
