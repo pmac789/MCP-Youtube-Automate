@@ -2,13 +2,14 @@
 heygen_video.py — Generates avatar lip-sync videos via HeyGen v2 API.
 
 Flow:
-  1. Upload Suno MP3 → /v1/asset                       → asset_id
+  1. Upload ElevenLabs MP3 → /v1/asset                  → asset_id
   2. Submit main video job (1920×1080) → /v2/video/generate  → video_id
   3. Submit Short job (1080×1920)     → /v2/video/generate  → video_id
   4. Poll /v1/video_status.get until status == "completed"
   5. Download both MP4s to /output/
 
-Avatar and background configs are chosen per content type.
+Avatar ID is read from HEYGEN_AVATAR_ID env var.
+Background colours are chosen per content type.
 """
 
 import os
@@ -29,50 +30,25 @@ MAX_POLL_ATTEMPTS = 80   # 20 minutes max
 OUTPUT_DIR = Path(__file__).parent / "output"
 
 # ---------------------------------------------------------------------------
-# Avatar / background / voice presets per content type
-# HeyGen avatar IDs: replace with real IDs from your HeyGen account dashboard
+# Background colour presets per content type
+# Avatar ID is read at runtime from HEYGEN_AVATAR_ID env var
 # ---------------------------------------------------------------------------
 
-CONTENT_CONFIGS: dict[str, dict] = {
-    "learning": {
-        "avatar_id": "Daisy-inskirt-20220818",       # friendly female avatar
-        "avatar_style": "normal",
-        "voice_id": "2d5b0e6cf36f460aa7fc47e3eee4ba54",  # warm female voice
-        "background": {
-            "type": "color",
-            "value": "#FFE066",                        # warm yellow classroom feel
-        },
-    },
-    "song": {
-        "avatar_id": "Tyler-incasualsuit-20220721",   # energetic male avatar
-        "avatar_style": "happy",
-        "voice_id": "1985984fde714e0ab4b0b1f5e9c26b4e",  # upbeat male voice
-        "background": {
-            "type": "color",
-            "value": "#B5EAD7",                        # soft green
-        },
-    },
-    "movement": {
-        "avatar_id": "Tyler-incasualsuit-20220721",
-        "avatar_style": "happy",
-        "voice_id": "1985984fde714e0ab4b0b1f5e9c26b4e",
-        "background": {
-            "type": "color",
-            "value": "#FF9AA2",                        # energetic pink
-        },
-    },
-    "story": {
-        "avatar_id": "Daisy-inskirt-20220818",
-        "avatar_style": "normal",
-        "voice_id": "2d5b0e6cf36f460aa7fc47e3eee4ba54",
-        "background": {
-            "type": "color",
-            "value": "#C7CEEA",                        # calm lavender
-        },
-    },
+BACKGROUND_BY_TYPE: dict[str, dict] = {
+    "learning":  {"type": "color", "value": "#FFE066"},   # warm yellow
+    "song":      {"type": "color", "value": "#B5EAD7"},   # soft green
+    "movement":  {"type": "color", "value": "#FF9AA2"},   # energetic pink
+    "story":     {"type": "color", "value": "#C7CEEA"},   # calm lavender
 }
 
-DEFAULT_CONFIG = CONTENT_CONFIGS["learning"]
+DEFAULT_BACKGROUND = BACKGROUND_BY_TYPE["learning"]
+
+
+def _get_avatar_id() -> str:
+    avatar_id = os.environ.get("HEYGEN_AVATAR_ID")
+    if not avatar_id:
+        raise EnvironmentError("HEYGEN_AVATAR_ID is not set")
+    return avatar_id
 
 
 def generate_video(script: str, audio_path: str, title: str, content_type: str = "learning") -> dict:
@@ -93,7 +69,8 @@ def generate_video(script: str, audio_path: str, title: str, content_type: str =
         raise EnvironmentError("HEYGEN_API_KEY is not set")
 
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-    config = CONTENT_CONFIGS.get(content_type, DEFAULT_CONFIG)
+    avatar_id = _get_avatar_id()
+    background = BACKGROUND_BY_TYPE.get(content_type, DEFAULT_BACKGROUND)
 
     # Step 1 — upload audio
     asset_id = _upload_audio(api_key, audio_path)
@@ -107,7 +84,8 @@ def generate_video(script: str, audio_path: str, title: str, content_type: str =
         title=f"{title} (main)",
         width=1920,
         height=1080,
-        config=config,
+        avatar_id=avatar_id,
+        background=background,
     )
     logger.info("HeyGen main job submitted: %s", main_video_id)
 
@@ -119,7 +97,8 @@ def generate_video(script: str, audio_path: str, title: str, content_type: str =
         title=f"{title} (short)",
         width=1080,
         height=1920,
-        config=config,
+        avatar_id=avatar_id,
+        background=background,
     )
     logger.info("HeyGen Short job submitted: %s", short_video_id)
 
@@ -178,10 +157,10 @@ def _submit_video_job(
     title: str,
     width: int,
     height: int,
-    config: dict,
+    avatar_id: str,
+    background: dict,
 ) -> str:
     """Submit a /v2/video/generate job. Returns video_id."""
-    # Strip [VISUAL: ...] markers from script before sending to HeyGen
     import re
     clean_script = re.sub(r"\[VISUAL:[^\]]*\]", "", script).strip()
 
@@ -190,14 +169,14 @@ def _submit_video_job(
             {
                 "character": {
                     "type": "avatar",
-                    "avatar_id": config["avatar_id"],
-                    "avatar_style": config["avatar_style"],
+                    "avatar_id": avatar_id,
+                    "avatar_style": "normal",
                 },
                 "voice": {
                     "type": "audio",
                     "audio_asset_id": asset_id,
                 },
-                "background": config["background"],
+                "background": background,
             }
         ],
         "dimension": {"width": width, "height": height},

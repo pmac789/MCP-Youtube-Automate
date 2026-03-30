@@ -10,7 +10,7 @@ from datetime import datetime
 
 from content_calendar import get_todays_content
 from claude_writer import write_content
-from suno_music import generate_music
+from elevenlabs_music import generate_music
 from heygen_video import generate_video
 from youtube_uploader import upload_videos
 from utils import setup_logging, cleanup_output
@@ -31,8 +31,8 @@ def run_pipeline() -> None:
     written = write_content(content_plan)
     logger.info("Title: %s", written["title"])
 
-    # Step 3 — Suno generates music from lyrics
-    logger.info("[3/6] Generating music with Suno...")
+    # Step 3 — ElevenLabs generates music + voice
+    logger.info("[3/6] Generating music + voice with ElevenLabs...")
     audio_path = generate_music(
         lyrics=written["lyrics"],
         style=written.get("style", "children's pop"),
