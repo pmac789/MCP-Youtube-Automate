@@ -25,6 +25,7 @@ load_dotenv()
 logger = logging.getLogger(__name__)
 
 HEYGEN_BASE_URL = "https://api.heygen.com"
+HEYGEN_UPLOAD_URL = "https://upload.heygen.com"
 POLL_INTERVAL_SECONDS = 15
 MAX_POLL_ATTEMPTS = 80   # 20 minutes max
 OUTPUT_DIR = Path(__file__).parent / "output"
@@ -136,7 +137,7 @@ def _upload_audio(api_key: str, audio_path: str) -> str:
     with httpx.Client(timeout=120) as client:
         with open(file_path, "rb") as f:
             response = client.post(
-                f"{HEYGEN_BASE_URL}/v1/asset",
+                f"{HEYGEN_UPLOAD_URL}/v1/asset",
                 headers=upload_headers,
                 content=f.read(),
             )
