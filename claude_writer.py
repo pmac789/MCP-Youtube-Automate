@@ -134,7 +134,7 @@ def _build_prompt(content_plan: dict) -> str:
 
 def write_content(content_plan: dict) -> dict:
     """Call Claude to generate all written content for today's video."""
-    api_key = os.environ.get("ANTHROPIC_API_KEY") or os.environ.get("CLAUDE_API_KEY")
+    api_key = (os.environ.get("ANTHROPIC_API_KEY") or os.environ.get("CLAUDE_API_KEY") or "").strip()
     if not api_key:
         raise EnvironmentError("ANTHROPIC_API_KEY is not set")
 
