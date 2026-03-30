@@ -26,8 +26,8 @@ logger = logging.getLogger(__name__)
 
 HEYGEN_BASE_URL = "https://api.heygen.com"
 HEYGEN_UPLOAD_URL = "https://upload.heygen.com"
-POLL_INTERVAL_SECONDS = 15
-MAX_POLL_ATTEMPTS = 80   # 20 minutes max
+POLL_INTERVAL_SECONDS = 30
+MAX_POLL_ATTEMPTS = 30   # 15 minutes max (30s × 30)
 OUTPUT_DIR = Path(__file__).parent / "output"
 
 # ---------------------------------------------------------------------------
@@ -188,6 +188,9 @@ def _submit_video_job(
         "caption": False,
     }
 
+    import json as _json
+    logger.info("HeyGen video/generate payload: %s", _json.dumps(payload, indent=2))
+
     with httpx.Client(timeout=30) as client:
         response = client.post(
             f"{HEYGEN_BASE_URL}/v2/video/generate",
@@ -197,6 +200,7 @@ def _submit_video_job(
         response.raise_for_status()
 
     data = response.json()
+    logger.info("HeyGen video/generate response: %s", data)
     video_id = data.get("data", {}).get("video_id") or data.get("video_id")
     if not video_id:
         raise RuntimeError(f"HeyGen video/generate failed: {data}")
@@ -206,6 +210,7 @@ def _submit_video_job(
 def _poll_for_completion(api_key: str, video_id: str, label: str = "") -> str:
     """Poll /v1/video_status.get until status == 'completed'. Returns video_url."""
     tag = f"[{label}] " if label else ""
+    start = time.time()
 
     for attempt in range(1, MAX_POLL_ATTEMPTS + 1):
         with httpx.Client(timeout=30) as client:
@@ -219,20 +224,31 @@ def _poll_for_completion(api_key: str, video_id: str, label: str = "") -> str:
         data = response.json()
         job = data.get("data", {})
         status = job.get("status", "").lower()
+        elapsed = int(time.time() - start)
 
         if status == "completed":
             video_url = job.get("video_url")
             if not video_url:
-                raise RuntimeError(f"HeyGen {tag}job complete but no video_url: {job}")
+                raise RuntimeError(f"HeyGen {tag}job complete but no video_url. Full response: {data}")
+            logger.info("HeyGen %sjob completed in %ds", tag, elapsed)
             return video_url
 
         if status in ("failed", "error"):
-            raise RuntimeError(f"HeyGen {tag}job {video_id} failed: {job.get('error', job)}")
+            logger.error("HeyGen %sjob FAILED. Full response: %s", tag, data)
+            raise RuntimeError(f"HeyGen {tag}job {video_id} failed. Full response: {data}")
 
-        logger.debug(
-            "HeyGen %spoll %d/%d — status: %s  progress: %s%%",
-            tag, attempt, MAX_POLL_ATTEMPTS, status, job.get("progress", "?"),
-        )
+        # For any unexpected status, log the full response so we can see it
+        if status not in ("processing", "pending", "waiting"):
+            logger.warning(
+                "HeyGen %sunexpected status=%s  elapsed=%ds  full response: %s",
+                tag, status, elapsed, data,
+            )
+        else:
+            logger.info(
+                "HeyGen %spoll %d/%d — status=%s  elapsed=%ds  progress=%s%%",
+                tag, attempt, MAX_POLL_ATTEMPTS, status, elapsed, job.get("progress", "?"),
+            )
+
         time.sleep(POLL_INTERVAL_SECONDS)
 
     raise TimeoutError(
