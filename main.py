@@ -11,7 +11,7 @@ from datetime import datetime
 from content_calendar import get_todays_content
 from claude_writer import write_content
 from suno_music import generate_music
-from pictory_video import generate_video
+from heygen_video import generate_video
 from youtube_uploader import upload_videos
 from utils import setup_logging, cleanup_output
 
@@ -40,12 +40,13 @@ def run_pipeline() -> None:
     )
     logger.info("Audio saved: %s", audio_path)
 
-    # Step 4 — Pictory renders full video + Short
-    logger.info("[4/6] Rendering video with Pictory...")
+    # Step 4 — HeyGen renders avatar lip-sync video + Short
+    logger.info("[4/6] Rendering video with HeyGen...")
     video_paths = generate_video(
         script=written["script"],
         audio_path=audio_path,
         title=written["title"],
+        content_type=content_plan["type"],
     )
     logger.info("Videos: main=%s, short=%s", video_paths["main"], video_paths["short"])
 
