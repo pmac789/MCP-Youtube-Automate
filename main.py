@@ -1,8 +1,15 @@
 """
 main.py — Happy Melody Kids YouTube Automation Pipeline
 Runs daily at 09:00 UTC via the schedule library.
+
+Startup behaviour:
+  - Always runs the pipeline once immediately on startup (smoke test).
+  - FORCE_RUN=true  → same behaviour, useful to re-trigger via Railway without
+                       waiting for the scheduler (just redeploy with the var set).
+  - Set SKIP_STARTUP_RUN=true to disable the immediate run (schedule-only mode).
 """
 
+import os
 import schedule
 import time
 import logging
@@ -76,8 +83,17 @@ def run_pipeline() -> None:
 def main() -> None:
     setup_logging()
     logger = logging.getLogger(__name__)
-    logger.info("Scheduler starting — daily run at 09:00 UTC")
 
+    force_run = os.environ.get("FORCE_RUN", "").lower() == "true"
+    skip_startup = os.environ.get("SKIP_STARTUP_RUN", "").lower() == "true"
+
+    # Run immediately on startup unless explicitly skipped
+    if force_run or not skip_startup:
+        reason = "FORCE_RUN=true" if force_run else "startup test run"
+        logger.info("Running pipeline immediately (%s)...", reason)
+        run_pipeline()
+
+    logger.info("Scheduler active — daily run at 09:00 UTC")
     schedule.every().day.at("09:00").do(run_pipeline)
 
     while True:
