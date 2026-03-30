@@ -90,14 +90,16 @@ cp .env.example .env
 | `HEYGEN_API_KEY` | app.heygen.com → Settings → API |
 | `HEYGEN_AVATAR_ID` | app.heygen.com → Avatars → pick avatar → copy ID (default: `823e02e85726482c80bfff9d6baceb4d`) |
 | `YT_PRIVACY` | `public`, `unlisted`, or `private` (default: `private`) |
+| `YOUTUBE_TOKEN_B64` | Output of `python auth_setup.py` — base64-encoded token.pickle |
 
 ### 4. YouTube OAuth (one-time, local)
 
 1. Go to [Google Cloud Console](https://console.cloud.google.com) → APIs & Services → Credentials
 2. Create an **OAuth 2.0 Client ID** (Desktop app)
 3. Download JSON → save as `client_secrets.json` in the project root
-4. Run: `python auth_setup.py` — opens a browser to authorise, saves `token.pickle`
-5. Upload `token.pickle` to Railway as a secret file (do **not** commit it)
+4. Run: `python auth_setup.py` — opens a browser to authorise, then prints a `YOUTUBE_TOKEN_B64` value
+5. Copy that value into Railway as the `YOUTUBE_TOKEN_B64` environment variable
+6. On Railway, the bot decodes it automatically at startup — no file mounting needed
 
 ### 5. Run locally
 
@@ -111,9 +113,9 @@ python main.py          # starts the scheduler; fires daily at 09:00 UTC
 
 1. Push this repo to GitHub
 2. Create a new Railway project → connect the GitHub repo
-3. Add all environment variables from `.env.example`
-4. Mount `token.pickle` as a volume or secret file at `/app/token.pickle`
-5. Railway uses `railway.toml` — it will run `python main.py` automatically
+3. Add all 7 environment variables from `.env.example` (including `YOUTUBE_TOKEN_B64`)
+4. Railway uses `railway.toml` — it will run `python main.py` automatically
+5. No file mounting needed — `token.pickle` is decoded from `YOUTUBE_TOKEN_B64` at startup
 
 ---
 

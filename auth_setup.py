@@ -2,12 +2,14 @@
 auth_setup.py — One-time local script to generate token.pickle for YouTube OAuth2.
 
 Run this once on your local machine (where a browser is available) before deploying.
-It will open a browser window asking you to authorise the app.
+It will open a browser window asking you to authorise the app, then print the
+YOUTUBE_TOKEN_B64 value ready to paste into Railway as an environment variable.
 
 Usage:
   python auth_setup.py
 """
 
+import base64
 import pickle
 from pathlib import Path
 
@@ -33,9 +35,17 @@ def main() -> None:
     with open(TOKEN_FILE, "wb") as f:
         pickle.dump(creds, f)
 
-    print(f"token.pickle saved to: {TOKEN_FILE}")
-    print("Upload token.pickle to your Railway project as a secret file or environment variable.")
-    print("IMPORTANT: Never commit token.pickle to git.")
+    # Encode to base64 for Railway env var
+    b64 = base64.b64encode(TOKEN_FILE.read_bytes()).decode("utf-8")
+
+    print("\n✅  token.pickle saved locally.")
+    print("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+    print("   Copy the value below into Railway as an environment variable:")
+    print("   Variable name:  YOUTUBE_TOKEN_B64")
+    print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n")
+    print(b64)
+    print("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+    print("IMPORTANT: Never commit token.pickle or this value to git.")
 
 
 if __name__ == "__main__":
