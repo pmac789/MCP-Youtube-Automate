@@ -143,10 +143,11 @@ def _upload_audio(api_key: str, audio_path: str) -> str:
             )
         response.raise_for_status()
 
-    data = response.json()
-    asset_id = data.get("data", {}).get("asset_id") or data.get("asset_id")
+    body = response.json()
+    # HeyGen uses code=100 to mean success (not an HTTP status code)
+    asset_id = body.get("data", {}).get("id")
     if not asset_id:
-        raise RuntimeError(f"HeyGen asset upload failed: {data}")
+        raise RuntimeError(f"HeyGen asset upload failed: {body}")
     return asset_id
 
 
