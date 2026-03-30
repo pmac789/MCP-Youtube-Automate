@@ -21,7 +21,7 @@ from datetime import datetime, timezone
 from content_calendar import get_todays_content
 from claude_writer import write_content
 from elevenlabs_music import generate_music
-from heygen_video import generate_video
+from video_builder import generate_video
 from youtube_uploader import upload_videos
 from utils import setup_logging, cleanup_output
 
@@ -59,8 +59,8 @@ def run_pipeline() -> None:
         raise RuntimeError(f"[3/6] ElevenLabs TTS failed: {exc}") from exc
     logger.info("Audio saved: %s", audio_path)
 
-    # Step 4 — HeyGen renders avatar lip-sync video + Short
-    logger.info("[4/6] Rendering video with HeyGen...")
+    # Step 4 — Build animated video locally with FFmpeg
+    logger.info("[4/6] Building video with FFmpeg...")
     try:
         video_paths = generate_video(
             script=written["script"],
@@ -69,7 +69,7 @@ def run_pipeline() -> None:
             content_type=content_plan["type"],
         )
     except Exception as exc:
-        raise RuntimeError(f"[4/6] HeyGen video rendering failed: {exc}") from exc
+        raise RuntimeError(f"[4/6] FFmpeg video build failed: {exc}") from exc
     logger.info("Videos: main=%s, short=%s", video_paths["main"], video_paths["short"])
 
     # Step 5 — Upload to YouTube
