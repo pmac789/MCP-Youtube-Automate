@@ -35,7 +35,7 @@ def _restore_token_from_env() -> None:
     If YOUTUBE_TOKEN_B64 is set (Railway), decode it and write token.pickle to disk.
     This runs once at import time so the rest of the module works unchanged.
     """
-    b64 = os.environ.get("YOUTUBE_TOKEN_B64")
+    b64 = (os.environ.get("YOUTUBE_TOKEN_B64") or "").strip()
     if not b64:
         return
     if TOKEN_FILE.exists():

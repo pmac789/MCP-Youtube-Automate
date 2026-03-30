@@ -45,7 +45,7 @@ DEFAULT_BACKGROUND = BACKGROUND_BY_TYPE["learning"]
 
 
 def _get_avatar_id() -> str:
-    avatar_id = os.environ.get("HEYGEN_AVATAR_ID")
+    avatar_id = (os.environ.get("HEYGEN_AVATAR_ID") or "").strip()
     if not avatar_id:
         raise EnvironmentError("HEYGEN_AVATAR_ID is not set")
     return avatar_id
@@ -64,7 +64,7 @@ def generate_video(script: str, audio_path: str, title: str, content_type: str =
     Returns:
         dict with keys "main" (str path) and "short" (str path).
     """
-    api_key = os.environ.get("HEYGEN_API_KEY")
+    api_key = (os.environ.get("HEYGEN_API_KEY") or "").strip()
     if not api_key:
         raise EnvironmentError("HEYGEN_API_KEY is not set")
 

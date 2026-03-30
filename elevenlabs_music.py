@@ -94,7 +94,7 @@ def generate_voiceover(script: str, output_filename: str | None = None) -> str:
 # ---------------------------------------------------------------------------
 
 def _require_env(name: str) -> str:
-    value = os.environ.get(name)
+    value = (os.environ.get(name) or "").strip()
     if not value:
         raise EnvironmentError(f"{name} is not set")
     return value
