@@ -1,6 +1,5 @@
 [build]
 builder = "nixpacks"
-nixPackages = ["ffmpeg", "ffmpeg.bin"]
 
 [deploy]
 startCommand = "python main.py"

@@ -14,6 +14,7 @@ How it works:
 
 import logging
 import re
+import shutil
 import subprocess
 import uuid
 from pathlib import Path
@@ -35,9 +36,6 @@ DEFAULT_BG = "#7BC8F6"
 
 SHORT_DURATION = 60   # seconds
 
-# FFmpeg binary candidates — try plain name first, then common absolute paths
-_FFMPEG_CANDIDATES = ["ffmpeg", "/usr/bin/ffmpeg", "/usr/local/bin/ffmpeg", "/nix/var/nix/profiles/default/bin/ffmpeg"]
-
 
 # ---------------------------------------------------------------------------
 # Startup check
@@ -45,29 +43,29 @@ _FFMPEG_CANDIDATES = ["ffmpeg", "/usr/bin/ffmpeg", "/usr/local/bin/ffmpeg", "/ni
 
 def _find_ffmpeg() -> str:
     """
-    Return the first working ffmpeg binary path.
-    Logs a clear error and raises if none found.
+    Return the working ffmpeg binary path.
+    Uses shutil.which() to search PATH, then tries the Nix profile path.
+    Logs a clear error and raises if not found.
     """
-    for candidate in _FFMPEG_CANDIDATES:
-        try:
-            result = subprocess.run(
-                [candidate, "-version"],
-                capture_output=True,
-                timeout=10,
-            )
-            if result.returncode == 0:
-                logger.info("FFmpeg found: %s", candidate)
-                return candidate
-        except (FileNotFoundError, OSError):
-            continue
+    # Primary: search the entire PATH (works for Docker apt-get and most installs)
+    path = shutil.which("ffmpeg")
+    if path:
+        logger.info("FFmpeg found: %s", path)
+        return path
+
+    # Fallback: Nix default profile (Railway nixpacks installs here)
+    nix_path = shutil.which("ffmpeg", path="/nix/var/nix/profiles/default/bin")
+    if nix_path:
+        logger.info("FFmpeg found (nix profile): %s", nix_path)
+        return nix_path
 
     logger.error(
-        "FFmpeg not found - check nixpacks config. "
-        "Tried: %s", ", ".join(_FFMPEG_CANDIDATES)
+        "FFmpeg not found - check nixpacks.toml (nixPkgs = [\"ffmpeg\"]) "
+        "or Dockerfile (apt-get install ffmpeg)"
     )
     raise RuntimeError(
-        "FFmpeg not found. Add nixPackages = [\"ffmpeg\", \"ffmpeg.bin\"] to railway.toml "
-        "or install ffmpeg locally."
+        "FFmpeg not found. Ensure nixpacks.toml has nixPkgs = [\"ffmpeg\"] "
+        "or the Dockerfile installs ffmpeg via apt-get."
     )
 
 
