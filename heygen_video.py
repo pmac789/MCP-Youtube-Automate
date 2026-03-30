@@ -139,7 +139,6 @@ def _upload_audio(api_key: str, audio_path: str) -> str:
                 f"{HEYGEN_BASE_URL}/v1/asset",
                 headers=upload_headers,
                 content=f.read(),
-                params={"name": file_path.name},
             )
         response.raise_for_status()
 
