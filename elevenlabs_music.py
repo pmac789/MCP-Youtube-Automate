@@ -3,12 +3,16 @@ elevenlabs_music.py — Generates spoken audio via ElevenLabs Text-to-Speech API
 
 generate_music():
   Converts lyrics to speech using ElevenLabs TTS.
-  This produces the voice audio that HeyGen lip-syncs to the avatar.
   POST /v1/text-to-speech/{voice_id} → streams MP3 to output/
 
 generate_voiceover():
   Same as generate_music() but accepts a full script instead of lyrics.
   Strips [VISUAL: ...] markers before sending.
+
+Voice selection:
+  Set ELEVENLABS_VOICE_ID in the environment to override the default.
+  Default fallback: Charlotte (XB0fDUnXU5powFXDhCwa) — bright, friendly tone.
+  Find alternatives at elevenlabs.io/app/voice-library (search "child" or "kids").
 """
 
 import os
@@ -26,6 +30,11 @@ logger = logging.getLogger(__name__)
 
 ELEVENLABS_BASE_URL = "https://api.elevenlabs.io"
 OUTPUT_DIR = Path(__file__).parent / "output"
+
+# Default voice used when ELEVENLABS_VOICE_ID env var is not set.
+# Charlotte — bright, friendly tone that works well for kids content.
+# Override by setting ELEVENLABS_VOICE_ID in Railway / .env.
+DEFAULT_VOICE_ID = "XB0fDUnXU5powFXDhCwa"
 
 
 # ---------------------------------------------------------------------------
@@ -46,7 +55,7 @@ def generate_music(lyrics: str, style: str = "children's pop", mood: str = "happ
         Local file path string of the downloaded MP3.
     """
     api_key = _require_env("ELEVENLABS_API_KEY")
-    voice_id = _require_env("ELEVENLABS_VOICE_ID")
+    voice_id = _require_env("ELEVENLABS_VOICE_ID", default=DEFAULT_VOICE_ID)
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
     stem = str(uuid.uuid4())
@@ -67,7 +76,7 @@ def generate_voiceover(script: str, output_filename: str | None = None) -> str:
         Local file path string of the downloaded MP3.
     """
     api_key = _require_env("ELEVENLABS_API_KEY")
-    voice_id = _require_env("ELEVENLABS_VOICE_ID")
+    voice_id = _require_env("ELEVENLABS_VOICE_ID", default=DEFAULT_VOICE_ID)
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
     clean_script = re.sub(r"\[VISUAL:[^\]]*\]", "", script).strip()
@@ -83,9 +92,12 @@ def generate_voiceover(script: str, output_filename: str | None = None) -> str:
 # Internal helpers
 # ---------------------------------------------------------------------------
 
-def _require_env(name: str) -> str:
+def _require_env(name: str, default: str | None = None) -> str:
     value = (os.environ.get(name) or "").strip()
     if not value:
+        if default is not None:
+            logger.warning("%s not set — using default: %s", name, default)
+            return default
         raise EnvironmentError(f"{name} is not set")
     return value
 
@@ -94,11 +106,11 @@ def _stream_tts(api_key: str, voice_id: str, text: str, local_path: Path) -> Non
     """Stream ElevenLabs TTS audio directly to a local file."""
     payload = {
         "text": text,
-        "model_id": "eleven_multilingual_v2",
+        "model_id": "eleven_turbo_v2_5",
         "voice_settings": {
-            "stability": 0.6,
+            "stability": 0.5,
             "similarity_boost": 0.8,
-            "style": 0.3,
+            "style": 0.0,
             "use_speaker_boost": True,
         },
     }
