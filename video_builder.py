@@ -35,7 +35,7 @@ BG_COLOURS = {
 }
 DEFAULT_BG = "#7BC8F6"
 
-SHORT_DURATION = 60   # seconds
+SHORT_DURATION = 45   # seconds — kept short to reduce Railway memory pressure
 
 
 # ---------------------------------------------------------------------------
@@ -118,6 +118,7 @@ def generate_video(
         height=1280,
         title=title,
         bg_colour=bg_colour,
+        max_seconds=SHORT_DURATION,
     )
 
     logger.info("Videos ready: main=%s  short=%s", main_path, short_path)
@@ -153,10 +154,12 @@ def _build_video(
     height: int,
     title: str,
     bg_colour: str,
+    max_seconds: int | None = None,
 ) -> None:
     """
     Render a single MP4 using a simple, bulletproof FFmpeg command.
     Args are passed as a list — no shell escaping, no filtergraph string parsing issues.
+    max_seconds: if set, hard-caps the output duration (used for the Short).
     """
     safe_title = _sanitize_title(title)
     fontsize = 48 if width >= 1280 else 36
@@ -181,11 +184,18 @@ def _build_video(
         "-i", audio_path,
         "-vf", vf,
         "-shortest",
+        "-preset", "ultrafast",
+        "-crf", "28",
+        "-threads", "1",
         "-c:v", "libx264",
         "-c:a", "aac",
         "-pix_fmt", "yuv420p",
-        output_path,
     ]
+
+    if max_seconds is not None:
+        cmd += ["-t", str(max_seconds)]
+
+    cmd.append(output_path)
 
     logger.info("FFmpeg cmd: %s", " ".join(cmd))
     result = subprocess.run(cmd, capture_output=True, text=True)
