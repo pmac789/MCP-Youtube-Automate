@@ -8,38 +8,39 @@ import {SCENE_FRAMES, TRANSITION_FRAMES} from './Root';
 
 export interface ColorDef {
   name: string;
-  bg: string;        // background fill for the whole scene
-  textColor: string; // color of the word text
-  swatchBg: string;  // inner fill of the demonstration circle
+  /** The actual colour value — used for text colour and accent shapes. */
+  hex: string;
+  /** Lighter tint used for the backdrop blob behind the word. */
+  blobHex: string;
 }
 
+// Each colour: vivid hex for text + a lighter/softer tint for the bg blob.
 export const COLORS: ColorDef[] = [
-  {name: 'Red',    bg: '#FF3B3B', textColor: '#FFFFFF', swatchBg: '#FF3B3B'},
-  {name: 'Yellow', bg: '#FFD93D', textColor: '#333333', swatchBg: '#FFD93D'},
-  {name: 'Blue',   bg: '#2E9BFF', textColor: '#FFFFFF', swatchBg: '#2E9BFF'},
-  {name: 'Green',  bg: '#3DBE5B', textColor: '#FFFFFF', swatchBg: '#3DBE5B'},
-  {name: 'Purple', bg: '#9B30D9', textColor: '#FFFFFF', swatchBg: '#9B30D9'},
-  {name: 'Orange', bg: '#FF8C00', textColor: '#FFFFFF', swatchBg: '#FF8C00'},
+  {name: 'Red',    hex: '#E8000D', blobHex: '#FFB3B8'},
+  {name: 'Yellow', hex: '#E6A800', blobHex: '#FFF0A0'},
+  {name: 'Blue',   hex: '#005FCC', blobHex: '#B3D4FF'},
+  {name: 'Green',  hex: '#007A24', blobHex: '#B3F0C8'},
+  {name: 'Purple', hex: '#7B00CC', blobHex: '#DDB3FF'},
+  {name: 'Orange', hex: '#CC5500', blobHex: '#FFD4A0'},
 ];
 
 export const LearnColors: React.FC = () => {
   return (
+    // Sky blue base — constant throughout the whole video
     <AbsoluteFill style={{backgroundColor: '#7BC8F6'}}>
       {/* Audio — copy ../output/audio.mp3 to public/audio.mp3 before rendering */}
       <Audio src={staticFile('audio.mp3')} />
 
-      {/*
-        TransitionSeries shortens the total timeline by the transition duration
-        for each cut, so TOTAL_FRAMES is already calculated correctly in Root.tsx.
-      */}
       <TransitionSeries>
         {COLORS.map((color, i) => (
           <React.Fragment key={color.name}>
-            <TransitionSeries.Sequence durationInFrames={SCENE_FRAMES}>
+            <TransitionSeries.Sequence
+              durationInFrames={SCENE_FRAMES}
+              // premount so font + assets are ready before the scene becomes visible
+            >
               <ColorScene color={color} sceneIndex={i} />
             </TransitionSeries.Sequence>
 
-            {/* No transition after the last scene */}
             {i < COLORS.length - 1 && (
               <TransitionSeries.Transition
                 presentation={fade()}

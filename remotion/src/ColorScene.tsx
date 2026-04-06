@@ -1,5 +1,13 @@
 import React from 'react';
-import {AbsoluteFill, spring, useCurrentFrame, useVideoConfig, random} from 'remotion';
+import {
+  AbsoluteFill,
+  interpolate,
+  spring,
+  useCurrentFrame,
+  useVideoConfig,
+  random,
+  Easing,
+} from 'remotion';
 import {loadFont} from '@remotion/google-fonts/Nunito';
 import {ColorDef} from './LearnColors';
 import {MusicNote} from './components/MusicNote';
@@ -7,8 +15,7 @@ import {Star} from './components/Star';
 import {Sparkle} from './components/Sparkle';
 import {Watermark} from './Watermark';
 
-// Load Nunito Black — rounded, friendly, great for kids content.
-// Called at module level so Remotion blocks rendering until the font is ready.
+// Loaded once at module level — Remotion blocks rendering until the font is ready.
 const {fontFamily} = loadFont('normal', {
   weights: ['900'],
   subsets: ['latin'],
@@ -23,100 +30,147 @@ export const ColorScene: React.FC<ColorSceneProps> = ({color, sceneIndex}) => {
   const frame = useCurrentFrame();
   const {fps, width, height} = useVideoConfig();
 
-  // ── Title entrance spring ──────────────────────────────────────────────────
-  // TransitionSeries handles fade in/out at scene edges — no manual opacity needed.
-  const titleScale = spring({
+  // ── Blob entrance: slides up from below with easing ───────────────────────
+  const blobEntrance = interpolate(
+    frame,
+    [0, 25],
+    [120, 0],
+    {
+      extrapolateRight: 'clamp',
+      easing: Easing.out(Easing.exp),
+    }
+  );
+  const blobScale = spring({
     frame,
     fps,
-    config: {damping: 8}, // bouncy entrance, per skill best practices
-    durationInFrames: 40,
+    config: {damping: 10, stiffness: 160},
+    durationInFrames: 30,
   });
 
-  // Gentle continuous bounce once the spring has settled (~40 frames)
-  const continuousBounce =
-    frame > 40
-      ? Math.sin((frame / fps) * Math.PI * 1.6) * 0.04 + 1
-      : 1;
+  // ── Word bounce-in ─────────────────────────────────────────────────────────
+  // Per skill: {damping: 8} = bouncy entrance
+  const wordScale = spring({
+    frame,
+    fps,
+    config: {damping: 8},
+    durationInFrames: 40,
+    from: 0,
+    to: 1,
+  });
 
-  const finalScale = titleScale * continuousBounce;
+  // Continuous gentle bob after spring settles (frame > ~40)
+  const bob = frame > 38
+    ? Math.sin((frame / fps) * Math.PI * 1.8) * 0.032 + 1
+    : 1;
 
-  // ── Swatch circle entrance — slightly delayed ──────────────────────────────
-  const swatchScale = spring({
+  const finalWordScale = wordScale * bob;
+
+  // ── Colour circle that pulses in the bottom half ───────────────────────────
+  const circlePulse = 1 + Math.sin((frame / fps) * Math.PI * 2.4) * 0.05;
+  const circleScale = spring({
     frame,
     fps,
     config: {damping: 8},
     durationInFrames: 35,
-    delay: 8,
-  });
+    delay: 10,
+    from: 0,
+    to: 1,
+  }) * circlePulse;
 
-  // ── Floating music notes (8 notes, seeded positions) ──────────────────────
+  // ── Seeded floating music notes (8) ───────────────────────────────────────
   const notes = Array.from({length: 8}, (_, i) => ({
-    x: random(`note-x-${sceneIndex}-${i}`) * (width - 120) + 60,
-    baseY: random(`note-y-${sceneIndex}-${i}`) * (height - 120) + 60,
+    x: random(`note-x-${sceneIndex}-${i}`) * (width - 140) + 70,
+    baseY: random(`note-y-${sceneIndex}-${i}`) * (height - 140) + 70,
     speed: random(`note-speed-${sceneIndex}-${i}`) * 0.9 + 0.5,
     symbol: i % 2 === 0 ? '♪' : '♫',
-    size: random(`note-size-${sceneIndex}-${i}`) * 24 + 28,
+    size: random(`note-size-${sceneIndex}-${i}`) * 28 + 32,
     phase: random(`note-phase-${sceneIndex}-${i}`) * Math.PI * 2,
-    delayFrames: Math.floor(random(`note-delay-${sceneIndex}-${i}`) * 20),
+    delayFrames: Math.floor(random(`note-delay-${sceneIndex}-${i}`) * 18),
   }));
 
-  // ── Twinkling stars (14 stars, seeded) ────────────────────────────────────
-  const stars = Array.from({length: 14}, (_, i) => ({
+  // ── Seeded twinkling stars (16) ───────────────────────────────────────────
+  const stars = Array.from({length: 16}, (_, i) => ({
     x: random(`star-x-${sceneIndex}-${i}`) * width,
     y: random(`star-y-${sceneIndex}-${i}`) * height,
-    size: random(`star-size-${sceneIndex}-${i}`) * 18 + 10,
+    size: random(`star-size-${sceneIndex}-${i}`) * 22 + 10,
     phase: random(`star-phase-${sceneIndex}-${i}`) * Math.PI * 2,
-    speed: random(`star-speed-${sceneIndex}-${i}`) * 1.5 + 0.8,
+    speed: random(`star-speed-${sceneIndex}-${i}`) * 1.6 + 0.7,
   }));
 
-  // ── Rising sparkle confetti dots (10 dots) ────────────────────────────────
-  const sparkles = Array.from({length: 10}, (_, i) => ({
+  // ── Rising sparkle bubbles (12) ───────────────────────────────────────────
+  const sparkles = Array.from({length: 12}, (_, i) => ({
     x: random(`sparkle-x-${sceneIndex}-${i}`) * width,
     startY: height + 20,
-    size: random(`sparkle-size-${sceneIndex}-${i}`) * 14 + 8,
-    speed: random(`sparkle-speed-${sceneIndex}-${i}`) * 0.6 + 0.3,
+    size: random(`sparkle-size-${sceneIndex}-${i}`) * 16 + 8,
+    speed: random(`sparkle-speed-${sceneIndex}-${i}`) * 0.55 + 0.3,
     phase: random(`sparkle-phase-${sceneIndex}-${i}`) * Math.PI * 2,
     hue: random(`sparkle-hue-${sceneIndex}-${i}`) * 360,
   }));
 
+  // Adaptive font size so the word always fits comfortably
+  const charCount = color.name.length;
+  const maxFontSize = 190;
+  const fontSize = charCount > 5
+    ? Math.round(maxFontSize * (5 / charCount))
+    : maxFontSize;
+
   return (
     <AbsoluteFill>
-      {/* ── Solid colour background ─────────────────────────────────────── */}
-      <AbsoluteFill style={{backgroundColor: color.bg}} />
+      {/* Sky blue bg is inherited from LearnColors — nothing to set here */}
+
+      {/* ── Soft colour blob behind the word ───────────────────────────── */}
+      <AbsoluteFill
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <div
+          style={{
+            width: 780,
+            height: 320,
+            borderRadius: 160,
+            backgroundColor: color.blobHex,
+            opacity: 0.82,
+            transform: `translateY(${blobEntrance}px) scale(${blobScale})`,
+            boxShadow: `0 12px 60px ${color.hex}44`,
+          }}
+        />
+      </AbsoluteFill>
 
       {/* ── Twinkling stars ─────────────────────────────────────────────── */}
       {stars.map((star, i) => (
         <Star key={`star-${i}`} {...star} frame={frame} fps={fps} />
       ))}
 
-      {/* ── Rising sparkle confetti ─────────────────────────────────────── */}
+      {/* ── Rising sparkle bubbles ──────────────────────────────────────── */}
       {sparkles.map((s, i) => (
         <Sparkle key={`sparkle-${i}`} {...s} frame={frame} fps={fps} />
       ))}
 
-      {/* ── Centered content ────────────────────────────────────────────── */}
+      {/* ── Centred content stack ───────────────────────────────────────── */}
       <AbsoluteFill
         style={{
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          gap: 24,
+          gap: 28,
         }}
       >
-        {/* Color name */}
+        {/* The colour name — large, in the actual colour, white outline ensures readability */}
         <div
           style={{
-            fontSize: 148,
+            fontSize,
             fontWeight: 900,
             fontFamily,
-            color: color.textColor,
-            textShadow: [
-              '0 6px 0 rgba(0,0,0,0.22)',
-              '0 12px 24px rgba(0,0,0,0.18)',
-            ].join(', '),
-            transform: `scale(${finalScale})`,
-            letterSpacing: 6,
+            color: color.hex,
+            // White outline keeps the text legible on any background (required for yellow)
+            WebkitTextStroke: `6px white`,
+            textShadow: `0 8px 24px rgba(0,0,0,0.18)`,
+            transform: `scale(${finalWordScale})`,
+            letterSpacing: 8,
             userSelect: 'none',
             lineHeight: 1,
           }}
@@ -124,30 +178,18 @@ export const ColorScene: React.FC<ColorSceneProps> = ({color, sceneIndex}) => {
           {color.name.toUpperCase()}
         </div>
 
-        {/* Colour demonstration circle */}
+        {/* Colour demonstration circle — shows the actual colour */}
         <div
           style={{
-            width: 110,
-            height: 110,
+            width: 120,
+            height: 120,
             borderRadius: '50%',
-            backgroundColor: 'white',
-            border: `8px solid rgba(255,255,255,0.8)`,
-            boxShadow: `0 8px 30px rgba(0,0,0,0.22), 0 0 0 4px ${color.bg}`,
-            transform: `scale(${swatchScale})`,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
+            backgroundColor: color.hex,
+            border: '8px solid white',
+            boxShadow: `0 8px 32px ${color.hex}88, 0 0 0 4px ${color.blobHex}`,
+            transform: `scale(${circleScale})`,
           }}
-        >
-          <div
-            style={{
-              width: 86,
-              height: 86,
-              borderRadius: '50%',
-              backgroundColor: color.swatchBg,
-            }}
-          />
-        </div>
+        />
       </AbsoluteFill>
 
       {/* ── Floating music notes ─────────────────────────────────────────── */}

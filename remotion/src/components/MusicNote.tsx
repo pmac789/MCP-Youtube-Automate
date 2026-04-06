@@ -18,29 +18,31 @@ export const MusicNote: React.FC<MusicNoteProps> = ({
 }) => {
   const adjustedFrame = Math.max(0, frame - delayFrames);
 
-  // Float vertically using a sine wave
-  const floatOffset = Math.sin((adjustedFrame / fps) * Math.PI * 2 * speed + phase) * 28;
+  // Float on a sine wave
+  const floatY = Math.sin((adjustedFrame / fps) * Math.PI * 2 * speed + phase) * 30;
 
   // Gentle rotation sway
-  const rotation = Math.sin((adjustedFrame / fps) * Math.PI * speed + phase) * 14;
+  const rotation = Math.sin((adjustedFrame / fps) * Math.PI * speed * 0.7 + phase) * 16;
 
   // Fade in on entrance
-  const opacity = interpolate(adjustedFrame, [0, 12], [0, 0.85], {extrapolateRight: 'clamp'});
+  const opacity = interpolate(adjustedFrame, [0, 14], [0, 0.88], {
+    extrapolateRight: 'clamp',
+  });
 
   // Subtle scale pulse
-  const scalePulse = 1 + Math.sin((adjustedFrame / fps) * Math.PI * 2.2 + phase) * 0.06;
+  const scale = 1 + Math.sin((adjustedFrame / fps) * Math.PI * 2.4 + phase) * 0.07;
 
   return (
     <div
       style={{
         position: 'absolute',
         left: x,
-        top: baseY + floatOffset,
+        top: baseY + floatY,
         fontSize: size,
         opacity,
-        transform: `translate(-50%, -50%) rotate(${rotation}deg) scale(${scalePulse})`,
-        color: 'rgba(255, 255, 255, 0.88)',
-        textShadow: '2px 2px 6px rgba(0,0,0,0.35)',
+        transform: `translate(-50%, -50%) rotate(${rotation}deg) scale(${scale})`,
+        color: 'white',
+        textShadow: '2px 2px 0 rgba(0,0,0,0.25), 0 0 12px rgba(255,255,255,0.5)',
         userSelect: 'none',
         pointerEvents: 'none',
       }}
