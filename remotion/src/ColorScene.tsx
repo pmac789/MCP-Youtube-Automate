@@ -1,17 +1,18 @@
 import React from 'react';
-import {
-  AbsoluteFill,
-  interpolate,
-  spring,
-  useCurrentFrame,
-  useVideoConfig,
-  random,
-} from 'remotion';
+import {AbsoluteFill, spring, useCurrentFrame, useVideoConfig, random} from 'remotion';
+import {loadFont} from '@remotion/google-fonts/Nunito';
 import {ColorDef} from './LearnColors';
 import {MusicNote} from './components/MusicNote';
 import {Star} from './components/Star';
 import {Sparkle} from './components/Sparkle';
 import {Watermark} from './Watermark';
+
+// Load Nunito Black — rounded, friendly, great for kids content.
+// Called at module level so Remotion blocks rendering until the font is ready.
+const {fontFamily} = loadFont('normal', {
+  weights: ['900'],
+  subsets: ['latin'],
+});
 
 interface ColorSceneProps {
   color: ColorDef;
@@ -22,38 +23,30 @@ export const ColorScene: React.FC<ColorSceneProps> = ({color, sceneIndex}) => {
   const frame = useCurrentFrame();
   const {fps, width, height} = useVideoConfig();
 
-  // ── Scene fade in / out ────────────────────────────────────────────────────
-  const fadeIn = interpolate(frame, [0, 12], [0, 1], {extrapolateRight: 'clamp'});
-  const fadeOut = interpolate(frame, [fps * 14, fps * 15], [1, 0], {
-    extrapolateLeft: 'clamp',
-    extrapolateRight: 'clamp',
-  });
-  const sceneOpacity = Math.min(fadeIn, fadeOut);
-
   // ── Title entrance spring ──────────────────────────────────────────────────
+  // TransitionSeries handles fade in/out at scene edges — no manual opacity needed.
   const titleScale = spring({
     frame,
     fps,
-    config: {damping: 10, stiffness: 180, mass: 0.6},
-    from: 0,
-    to: 1,
+    config: {damping: 8}, // bouncy entrance, per skill best practices
+    durationInFrames: 40,
   });
 
-  // Gentle continuous bounce after entrance (starts after spring settles)
+  // Gentle continuous bounce once the spring has settled (~40 frames)
   const continuousBounce =
-    frame > fps * 0.6
+    frame > 40
       ? Math.sin((frame / fps) * Math.PI * 1.6) * 0.04 + 1
       : 1;
 
   const finalScale = titleScale * continuousBounce;
 
-  // ── Swatch circle entrance ─────────────────────────────────────────────────
+  // ── Swatch circle entrance — slightly delayed ──────────────────────────────
   const swatchScale = spring({
-    frame: Math.max(0, frame - 8),
+    frame,
     fps,
-    config: {damping: 12, stiffness: 200, mass: 0.5},
-    from: 0,
-    to: 1,
+    config: {damping: 8},
+    durationInFrames: 35,
+    delay: 8,
   });
 
   // ── Floating music notes (8 notes, seeded positions) ──────────────────────
@@ -76,7 +69,7 @@ export const ColorScene: React.FC<ColorSceneProps> = ({color, sceneIndex}) => {
     speed: random(`star-speed-${sceneIndex}-${i}`) * 1.5 + 0.8,
   }));
 
-  // ── Sparkle confetti dots (10 dots) ───────────────────────────────────────
+  // ── Rising sparkle confetti dots (10 dots) ────────────────────────────────
   const sparkles = Array.from({length: 10}, (_, i) => ({
     x: random(`sparkle-x-${sceneIndex}-${i}`) * width,
     startY: height + 20,
@@ -86,11 +79,8 @@ export const ColorScene: React.FC<ColorSceneProps> = ({color, sceneIndex}) => {
     hue: random(`sparkle-hue-${sceneIndex}-${i}`) * 360,
   }));
 
-  // Font family — Comic Sans is charming for kids and always available in Chromium
-  const kidFont = "'Comic Sans MS', 'Arial Rounded MT Bold', 'Arial Black', sans-serif";
-
   return (
-    <AbsoluteFill style={{opacity: sceneOpacity}}>
+    <AbsoluteFill>
       {/* ── Solid colour background ─────────────────────────────────────── */}
       <AbsoluteFill style={{backgroundColor: color.bg}} />
 
@@ -114,17 +104,16 @@ export const ColorScene: React.FC<ColorSceneProps> = ({color, sceneIndex}) => {
           gap: 24,
         }}
       >
-        {/* Color name word */}
+        {/* Color name */}
         <div
           style={{
             fontSize: 148,
             fontWeight: 900,
-            fontFamily: kidFont,
+            fontFamily,
             color: color.textColor,
             textShadow: [
-              '0 6px 0 rgba(0,0,0,0.25)',
-              '0 12px 24px rgba(0,0,0,0.2)',
-              '4px 4px 0 rgba(0,0,0,0.15)',
+              '0 6px 0 rgba(0,0,0,0.22)',
+              '0 12px 24px rgba(0,0,0,0.18)',
             ].join(', '),
             transform: `scale(${finalScale})`,
             letterSpacing: 6,
@@ -143,15 +132,13 @@ export const ColorScene: React.FC<ColorSceneProps> = ({color, sceneIndex}) => {
             borderRadius: '50%',
             backgroundColor: 'white',
             border: `8px solid rgba(255,255,255,0.8)`,
-            boxShadow: `0 8px 30px rgba(0,0,0,0.25), 0 0 0 4px ${color.bg}`,
+            boxShadow: `0 8px 30px rgba(0,0,0,0.22), 0 0 0 4px ${color.bg}`,
             transform: `scale(${swatchScale})`,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            overflow: 'hidden',
           }}
         >
-          {/* Inner fill shows the actual colour */}
           <div
             style={{
               width: 86,

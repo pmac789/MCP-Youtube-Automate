@@ -1,11 +1,15 @@
 import React from 'react';
-import {AbsoluteFill, Audio, Sequence, staticFile} from 'remotion';
+import {AbsoluteFill, staticFile} from 'remotion';
+import {Audio} from '@remotion/media';
+import {TransitionSeries, linearTiming} from '@remotion/transitions';
+import {fade} from '@remotion/transitions/fade';
 import {ColorScene} from './ColorScene';
+import {SCENE_FRAMES, TRANSITION_FRAMES} from './Root';
 
 export interface ColorDef {
   name: string;
   bg: string;        // background fill for the whole scene
-  textColor: string; // color of the word itself
+  textColor: string; // color of the word text
   swatchBg: string;  // inner fill of the demonstration circle
 }
 
@@ -18,28 +22,33 @@ export const COLORS: ColorDef[] = [
   {name: 'Orange', bg: '#FF8C00', textColor: '#FFFFFF', swatchBg: '#FF8C00'},
 ];
 
-const SCENE_FRAMES = 450; // 15 seconds × 30 fps
-
 export const LearnColors: React.FC = () => {
-  // audio.mp3 must be copied to remotion/public/ before rendering
-  // (the render-colors.sh script handles this automatically)
-  const hasAudio = true;
-
   return (
     <AbsoluteFill style={{backgroundColor: '#7BC8F6'}}>
-      {hasAudio && (
-        <Audio src={staticFile('audio.mp3')} />
-      )}
+      {/* Audio — copy ../output/audio.mp3 to public/audio.mp3 before rendering */}
+      <Audio src={staticFile('audio.mp3')} />
 
-      {COLORS.map((color, i) => (
-        <Sequence
-          key={color.name}
-          from={i * SCENE_FRAMES}
-          durationInFrames={SCENE_FRAMES}
-        >
-          <ColorScene color={color} sceneIndex={i} />
-        </Sequence>
-      ))}
+      {/*
+        TransitionSeries shortens the total timeline by the transition duration
+        for each cut, so TOTAL_FRAMES is already calculated correctly in Root.tsx.
+      */}
+      <TransitionSeries>
+        {COLORS.map((color, i) => (
+          <React.Fragment key={color.name}>
+            <TransitionSeries.Sequence durationInFrames={SCENE_FRAMES}>
+              <ColorScene color={color} sceneIndex={i} />
+            </TransitionSeries.Sequence>
+
+            {/* No transition after the last scene */}
+            {i < COLORS.length - 1 && (
+              <TransitionSeries.Transition
+                presentation={fade()}
+                timing={linearTiming({durationInFrames: TRANSITION_FRAMES})}
+              />
+            )}
+          </React.Fragment>
+        ))}
+      </TransitionSeries>
     </AbsoluteFill>
   );
 };

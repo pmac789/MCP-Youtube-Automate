@@ -1,4 +1,7 @@
 import React from 'react';
+import {loadFont} from '@remotion/google-fonts/Nunito';
+
+const {fontFamily} = loadFont('normal', {weights: ['700'], subsets: ['latin']});
 
 export const Watermark: React.FC = () => (
   <div
@@ -8,8 +11,8 @@ export const Watermark: React.FC = () => (
       right: 22,
       color: 'rgba(255, 255, 255, 0.62)',
       fontSize: 22,
-      fontFamily: "'Comic Sans MS', 'Arial Rounded MT Bold', Arial, sans-serif",
-      fontWeight: 'bold',
+      fontFamily,
+      fontWeight: 700,
       textShadow: '1px 1px 4px rgba(0,0,0,0.45)',
       userSelect: 'none',
       pointerEvents: 'none',
