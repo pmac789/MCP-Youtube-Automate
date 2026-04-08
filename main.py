@@ -18,6 +18,8 @@ import time
 import logging
 from datetime import datetime, timezone
 
+PIPELINE_PAUSED = os.environ.get("PIPELINE_PAUSED", "false").lower() == "true"
+
 from content_calendar import get_todays_content
 from claude_writer import write_content
 from elevenlabs_music import generate_music
@@ -101,6 +103,9 @@ def run_pipeline() -> None:
 def _run_once(reason: str) -> None:
     """Run the pipeline once, log any failure, then return — never re-raise."""
     logger = logging.getLogger(__name__)
+    if PIPELINE_PAUSED:
+        logger.info("Pipeline is PAUSED. Set PIPELINE_PAUSED=false to resume.")
+        return
     logger.info("Running pipeline (%s)...", reason)
     try:
         run_pipeline()
